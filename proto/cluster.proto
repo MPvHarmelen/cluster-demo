@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package cluster;
+
+// API to interact with a magical entity that manages hosts
+service Cluster {
+  // General info about the cluster
+  rpc Info(ClusterId) returns (cluster.Info);
+
+  // Create a new cluster (and thus two hosts with default timeout)
+  rpc NewCluster(ClusterId) returns (cluster.Info);
+
+  // Delete a cluster and clean up all of its hosts
+  // Returns the status from just before the cluster
+  // is removed.
+  rpc DestroyCluster(ClusterId) returns (cluster.Info);
+
+  // Detailed information about the hosts
+  rpc Hosts(ClusterId) returns (cluster.Hosts);
+
+  // Add a new host to a cluster. Responds with FAILED_PRECONDITION if the
+  // cluster already has the maximum number of hosts.
+  rpc AddHost(ClusterId) returns (cluster.Host);
+
+  // Delete a host from a cluster. Responds with FAILED_PRECONDITION if the
+  // cluster already has the minimum number of hosts.
+  rpc DestroyHost(ClusterHostId) returns (cluster.Host);
+
+  // Change some properties of a host identified by their name. Returns the
+  // updated host.
+  rpc PatchHost(ClusterHost) returns (cluster.Host);
+
+
+
+  // For demo purposes
+
+  // Set a host's status to "down"
+  rpc TakeDown(ClusterHostId) returns (cluster.Host);
+
+  // Set a host's status to "up"
+  rpc BringUp(ClusterHostId) returns (cluster.Host);
+}
+
+message ClusterId {
+  string name = 1;
+}
+
+message ClusterHostId {
+  ClusterId cluster = 1;
+  HostId host = 2;
+}
+
+message ClusterHost {
+  ClusterId cluster = 1;
+  Host host = 2;
+}
+
+// General info about the cluster.
+// Note that the number of hosts of a cluster is always between
+// 2 and 100 (inclusive)
+message Info {
+  ClusterId id = 1;
+  ClusterStatus status = 2;
+  uint32 hosts = 3;
+  uint32 online_hosts = 4;
+}
+
+// Cluster status:
+//   UNKNOWN - default to make sure we don't accidentally draw
+//             the wrong conclusion when data is missing.
+//   OK      - All hosts are online
+//   WARN    - Not all, but at least 50% of the hosts are online.
+//   FAIL    - less than 50% of the hosts are online.
+enum ClusterStatus {
+  UNKNOWN = 0;
+  OK = 1;
+  WARN = 2;
+  FAIL = 3;
+}
+
+message Hosts {
+  repeated cluster.Host hosts = 1;
+}
+
+message HostId {
+  string name = 1;
+}
+
+message Host {
+  HostId id = 1;
+  bool isUp = 2;
+  string ip = 3;
+  uint32 port = 4;
+  uint64 timeoutMilliseconds = 5;
+}
